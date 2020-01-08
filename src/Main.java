@@ -29,21 +29,23 @@ public class Main {
         }
         Job job = Job.getInstance();
         job.setJarByClass(Main.class);
-        Path usersInputPath = new Path("input\\users.csv");
-        Path departmentsInputPath = new Path("input\\departments.csv");
-        MultipleInputs.addInputPath(job, usersInputPath, TextInputFormat.class, JoinJob.UserMapper.class);
-        MultipleInputs.addInputPath(job, departmentsInputPath, TextInputFormat.class, JoinJob.DepartmentMapper.class);
-        job.setReducerClass(JoinJob.NameReducer.class);
+        //Path usersInputPath = new Path("input\\users.csv");
+        //Path departmentsInputPath = new Path("input\\departments.csv");
+        //MultipleInputs.addInputPath(job, usersInputPath, TextInputFormat.class, JoinJob.UserMapper.class);
+        //MultipleInputs.addInputPath(job, departmentsInputPath, TextInputFormat.class, JoinJob.DepartmentMapper.class);
+        //job.setReducerClass(JoinJob.NameReducer.class);
         //HashMap<String, String> allUsers = new HashMap<String, String>();
         //TextInputFormat.addInputPath(job, new Path("input\\SalesJan2009.csv"));
+
         //TextInputFormat.addInputPath(job, new Path("input\\logs_example.csv"));
-        //job.setInputFormatClass(TextInputFormat.class);
-        //job.setMapperClass(CountryTypeJob.CountryMapper.class);
-        //job.setReducerClass(CountryTypeJob.CountryReducer.class);
-        //job.setMapperClass(AVGPriceJob.AVGMapper.class);
-        //job.setReducerClass(AVGPriceJob.AVGReducer.class);
-        //job.setMapperClass(LoginCountJob.LoginMapper.class);
-        //job.setReducerClass(LoginCountJob.LoginReducer.class);
+
+
+            //job1.setMapperClass(TF_IDF.TFIDFMapper.class);
+            //job1.setReducerClass(TF_IDF.TFIDFReducer.class);
+          //MultipleInputs.addInputPath(job, new Path("corpus\\doc*"), TextInputFormat.class, TF_IDF.TFIDFMapper.class);
+          //MultipleInputs.addInputPath(job, new Path("corpus\\doc*"), TextInputFormat.class, TF_IDF.TokenizerMapper.class);
+            //job.setReducerClass(TF_IDF.IntSumReducer.class);
+
 
 
         //job.setMapperClass(UniqueUserMapper.class);
@@ -54,15 +56,20 @@ public class Main {
         //TextOutputFormat.setOutputPath(job, new Path("doc2.txt"));
         //job.setInputFormatClass(TextInputFormat.class);
 
+        //job.setOutputKeyClass(Text.class);
+        //job.setOutputValueClass(IntWritable.class);
 
 
         //FileInputFormat.setInputPaths(job, new Path("doc2.txt"));
-        TextOutputFormat.setOutputPath(job, new Path("output"));
+
+        //job.setOutputValueClass(IntWritable.class);
+        //job.setMapOutputKeyClass(Text.class);
+        //job.setMapOutputValueClass(DataWritable.class);
+        TextOutputFormat.setOutputPath(job, output);
         job.setOutputFormatClass(TextOutputFormat.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
-        //job.setMapOutputKeyClass(Text.class);
-        //job.setMapOutputValueClass(DataWritable.class);
+
         System.exit(job.waitForCompletion(true) ? 0 : 1);
 
     }
