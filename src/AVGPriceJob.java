@@ -2,7 +2,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -14,8 +13,6 @@ import org.apache.hadoop.util.Tool;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -39,7 +36,7 @@ public class AVGPriceJob extends Configured implements Tool {
         TextOutputFormat.setOutputPath(job, output);
         job.setOutputFormatClass(TextOutputFormat.class);
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(Text.class);;
+        job.setOutputValueClass(Text.class);
         return job.waitForCompletion(true) ? 0 : 1;
     }
 }
@@ -65,8 +62,6 @@ class AVGPrice {
 
     public static class AVGMapper
             extends Mapper<LongWritable, Text, Text, Text> {
-        private final static IntWritable one = new IntWritable(1);
-        private final Text word = new Text();
 
         @Override
         protected void map(LongWritable key, Text value, Context context)
@@ -76,7 +71,7 @@ class AVGPrice {
             }
             String[] arr = check(value.toString()).split(",");
 
-            context.write(new Text(arr[7] + " " + finder(arr[0])), new Text(arr[2]));
+            context.write(new Text(arr[7] + ":" + finder(arr[0])), new Text(arr[2]));
 
         }
     }
@@ -87,29 +82,17 @@ class AVGPrice {
                               Context context)
                 throws IOException, InterruptedException {
 
-            int flag = 0;
-            HashMap<String, ArrayList<String>> dict = new HashMap<String, ArrayList<String>>();
-            ArrayList<String> a;
+            ArrayList<String> arr = new ArrayList<>();
             for (Text value : values) {
-                if (flag == 0) {
-                    dict.put(key.toString(), new ArrayList<>());
-                    flag = 1;
-                }
-                a = dict.get(key.toString());
-                a.add(value.toString());
-                dict.put(key.toString(), a);
+                arr.add(value.toString());
             }
-            HashMap<String, Double> dict1 = new HashMap<>();
-            double a1;
-            for (Map.Entry entry : dict.entrySet()) {
-                a1 = ((ArrayList<String>) entry.getValue()).stream()
+
+            double avg = arr.stream()
                         .mapToInt((s) -> Integer.parseInt(s))
                         .average()
                         .getAsDouble();
-                dict1.put((String) entry.getKey(), a1);
-            }
 
-            context.write(new Text("Null"), new Text(dict1.toString()));
+            context.write(key, new Text(String.valueOf(avg)));
         }
     }
 }

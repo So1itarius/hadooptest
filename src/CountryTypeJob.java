@@ -93,23 +93,10 @@ class CountryType {
         @Override
         protected void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
 
-            int flag = 0;
-            HashMap<String, ArrayList<String>> dict = new HashMap<String, ArrayList<String>>();
-            ArrayList<String> a;
-            for (Text value : values) {
-                if (flag == 0) {
-                    dict.put(key.toString(), new ArrayList<>());
-                    flag = 1;
-                }
-                a = dict.get(key.toString());
-                a.add(value.toString());
-                dict.put(key.toString(), a);
-            }
-            for (Map.Entry entry : dict.entrySet()) {
-                dict.put((String) entry.getKey(), Counter((ArrayList<String>) entry.getValue()));
-            }
+            ArrayList<String> arr = new ArrayList<>();
+            for (Text value : values) arr.add(value.toString());
 
-            context.write(new Text("Null"), new Text(dict.toString()));
+            context.write(key, new Text(String.valueOf(Counter(arr))));
         }
     }
 }

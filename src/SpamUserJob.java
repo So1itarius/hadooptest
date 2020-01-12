@@ -4,7 +4,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -12,8 +11,6 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -64,14 +61,13 @@ class SpamIp{
                               Context context)
                 throws IOException, InterruptedException {
 
-            HashSet<String> tempMap = new HashSet<String>();
+            HashSet<String> tempMap = new HashSet<>();
             ArrayList<Long> time = new ArrayList<>();
-            HashMap<String, ArrayList<Long>> result = new HashMap<>();
             for (Text value : values) {
                 DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
                 Date date = null;
                 try { date = dateFormat.parse(value.toString().split(" ",2)[1]); } catch (ParseException e) { e.printStackTrace(); }
-                long unixTime = (long) (Objects.requireNonNull(date)).getTime()/1000;
+                long unixTime = (Objects.requireNonNull(date)).getTime() /1000;
 
                 tempMap.add(value.toString().split(" ")[0]);
                 time.add(unixTime);
@@ -80,12 +76,28 @@ class SpamIp{
             Collections.sort(time);
             Collections.reverse(time);
 
-            if (//tempMap.size()>=3 &
-                    ((time.get(0)-time.get(time.size()-1))/time.size())<=180
-                    & key.toString().split(" ")[1].equals("LOGIN")) {
-                context.write(key,new Text("AVGconnection: "+(time.get(0)-time.get(time.size()-1))/time.size()));
-            }
+            //Вариант вывода 1: оцениваем подрядидущие входы, если три подряд с разницей меньше 180 сек, то это подозрительная активность.
 
+            int flag=0;
+            for (int i=0; i<time.size()-1; i++){
+                if (flag==3
+                        //& tempMap.size()>=3
+                ){
+                    context.write(key,new Text("spam activity!"));
+                    break;
+                }
+
+                if (time.get(i)-time.get(i+1)<=180){flag++;}
+                else flag=0;
+                }
+
+            //Вариант вывод 2: оцениваем среднее время входа, если меньше 180 сек, то пользователь подозрителен.
+
+            //if (//tempMap.size()>=3 &
+            //        ((time.get(0)-time.get(time.size()-1))/time.size())<=180
+            //        & key.toString().split(" ")[1].equals("LOGIN")) {
+            //    context.write(key,new Text("AVGconnection: "+(time.get(0)-time.get(time.size()-1))/time.size()));
+            //}
         }
     }
 

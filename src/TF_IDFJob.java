@@ -2,7 +2,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 
@@ -33,7 +32,6 @@ public class TF_IDFJob extends Configured implements Tool {
         if (hdfs.exists(output)) {
             hdfs.delete(output, true);
         }
-        //Job job = Job.getInstance(getConf(), "WordCount");
         Job job1 = Job.getInstance(getConf(), "TF_IDFPart1");
         job1.setJarByClass(getClass());
         TextInputFormat.addInputPath(job1, new Path("corpus\\doc*"));
@@ -73,7 +71,6 @@ class TF_IDFPart1 {
 
     public static class TFIDFMapper
             extends Mapper<LongWritable, Text, Text, Text> {
-        private final IntWritable one = new IntWritable(1);
         private final Text word = new Text();
 
         @Override
@@ -82,8 +79,7 @@ class TF_IDFPart1 {
             StringTokenizer tokenizer = new StringTokenizer(value.toString());
             String fileName = ((FileSplit) context.getInputSplit()).getPath().getName();
             while (tokenizer.hasMoreTokens()) {
-                word.set(tokenizer.nextToken() + ':' + fileName);
-                //System.out.println(word+" "+one);
+                word.set(tokenizer.nextToken() + '#' + fileName);
                 context.write(new Text(fileName), word);
             }
         }
@@ -96,23 +92,19 @@ class TF_IDFPart1 {
                               Context context)
                 throws IOException, InterruptedException {
             int sum = 0;
-            String a;
-            HashMap<String, Integer> dict = new HashMap<String, Integer>();
-            HashMap<String, Long> dict1 = new HashMap<>();
+            HashMap<String, Long> dict = new HashMap<>();
             ArrayList<String> lst = new ArrayList<>();
             for (Text value : values) {
-                sum = 1;
-                a = key.toString();
+                sum++;
                 lst.add(String.valueOf(value));
-                dict.put(a, dict.getOrDefault(a, 0) + sum);
-
             }
+            System.out.println(sum);
             Stream<String> words = lst.stream();
             words.map(w -> w.split(" ")).flatMap(Arrays::stream)
                     .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
-                    .forEach(dict1::put);
-            for (Map.Entry<String, Long> item : dict1.entrySet()) {
-                context.write(new Text(item.getKey()), new Text(String.valueOf((float) item.getValue() / (float) dict.get(key.toString()))));
+                    .forEach(dict::put);
+            for (Map.Entry<String, Long> item : dict.entrySet()) {
+                context.write(new Text(item.getKey()), new Text(String.valueOf((float) item.getValue() / (float) sum)));
             }
 
         }
@@ -123,36 +115,28 @@ class TF_IDFPart2 {
     public static class FinalMapper extends Mapper<LongWritable, Text, Text, Text> {
         @Override
         public void map(LongWritable key, Text value, Mapper.Context context) throws IOException, InterruptedException {
-            String[] tokens = value.toString().split("\t");
-            //System.out.println(Arrays.toString(tokens));
+            String[] tokens = value.toString().split("#");
             context.write(new Text(tokens[0]), new Text(tokens[1]));
         }
     }
 
     public static class FinalReducer extends Reducer<Text, Text, Text, Text> {
-        private IntWritable result = new IntWritable();
 
         @Override
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-            HashMap<String, Long> dict1 = new HashMap<String, Long>();
-            HashMap<String, Long> dict2 = new HashMap<String, Long>();
             ArrayList<String[]> a = new ArrayList<>();
+            int sum=0;
             for (Text value : values) {
-                //System.out.println(key.toString());
-                dict1.put(key.toString(), dict1.getOrDefault(key.toString(), (long) 0) + 1);
+                sum++;
                 a.add(new String[]{key.toString(), value.toString()});
             }
+
             for (String[] value : a) {
-                //System.out.println(value[0] + ' ' + Double.parseDouble(value[1]) * log2((double) TF_IDF.countFiles / (double) dict1.get(value[0])));
-                //System.out.println(key.toString()+" "+log2((double)TF_IDF.countFiles/(double)dict1.get(key.toString())));
-                context.write(new Text(value[0]), new Text(String.valueOf(Double.parseDouble(value[1]) * log2((double) TF_IDFPart1.countFiles / (double) dict1.get(value[0])))));
+                context.write(new Text(value[0]+":"+value[1].split("\t")[0]),
+                        new Text(String.valueOf(Double.parseDouble(value[1].split("\t")[1]) *
+                        log2((double) TF_IDFPart1.countFiles / (double) sum))));
             }
-            //for(Map.Entry<String, Long> item : dict1.entrySet()){
-            //    System.out.printf("Key: %s  Value: %s \n", item.getKey(), item.getValue());
-            //}
 
-
-            //context.write(key, ;
         }
 
     }
