@@ -45,61 +45,51 @@ public class SpamUserJob extends Configured implements Tool {
     }
 }
 class SpamIp{
+
     public static class LoginMapper
             extends Mapper<LongWritable, Text, Text, Text> {
         @Override
         protected void map(LongWritable key, Text value, Context context)
                 throws IOException, InterruptedException {
             String[] splt = value.toString().split(",");
-            context.write(new Text(splt[4]+" "+splt[3]), new Text(splt[2]+" "+splt[5]));
+            context.write(new Text(splt[2]+" "+splt[3]), new Text(splt[4]+" "+splt[5]));
         }
     }
 
     public static class LoginReducer
             extends Reducer<Text, Text, Text, Text> {
+        Comparator<String []> comparator = new Comparator<String []>() {
+            public int compare(String [] left, String [] right) {
+                return Integer.compare(Integer.parseInt(left[1]), Integer.parseInt(right[1]));
+            }
+        };
         protected void reduce(Text key, Iterable<Text> values,
                               Context context)
                 throws IOException, InterruptedException {
 
-            HashSet<String> tempMap = new HashSet<>();
-            ArrayList<Long> time = new ArrayList<>();
+            ArrayList<String[]> pair = new ArrayList<>();
             for (Text value : values) {
                 DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
                 Date date = null;
                 try { date = dateFormat.parse(value.toString().split(" ",2)[1]); } catch (ParseException e) { e.printStackTrace(); }
                 long unixTime = (Objects.requireNonNull(date)).getTime() /1000;
 
-                tempMap.add(value.toString().split(" ")[0]);
-                time.add(unixTime);
+                String [] arr = {value.toString().split(" ")[0], String.valueOf(unixTime)};
+                pair.add(arr);
 
             }
-            Collections.sort(time);
-            Collections.reverse(time);
+            pair.sort(comparator.reversed());
 
-            //Вариант вывода 1: оцениваем подрядидущие входы, если три подряд с разницей меньше 180 сек, то это подозрительная активность.
-
-            int flag=0;
-            for (int i=0; i<time.size()-1; i++){
-                if (flag==3
-                        //& tempMap.size()>=3
-                ){
-                    context.write(key,new Text("spam activity!"));
-                    break;
-                }
-
-                if (time.get(i)-time.get(i+1)<=180){flag++;}
-                else flag=0;
-                }
-
-            //Вариант вывод 2: оцениваем среднее время входа, если меньше 180 сек, то пользователь подозрителен.
-
-            //if (//tempMap.size()>=3 &
-            //        ((time.get(0)-time.get(time.size()-1))/time.size())<=180
-            //        & key.toString().split(" ")[1].equals("LOGIN")) {
-            //    context.write(key,new Text("AVGconnection: "+(time.get(0)-time.get(time.size()-1))/time.size()));
-            //}
+            if (key.toString().split(" ")[1].equals("LOGIN")) {
+               for (int i=0;i<pair.size()-1;i++) {
+                    if (!pair.get(i)[0].equals(pair.get(i+1)[0])
+                            & Integer.parseInt(pair.get(i)[1])-Integer.parseInt(pair.get(i+1)[1])<=2){
+                        context.write(key,new Text("difference between connections of different users: "+
+                                String.valueOf(Integer.parseInt(pair.get(i)[1])-Integer.parseInt(pair.get(i+1)[1]))+" sec"));
+                    }
+               }
+            }
         }
     }
-
 }
 
